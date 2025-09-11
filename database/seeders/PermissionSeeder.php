@@ -21,6 +21,18 @@ class PermissionSeeder extends Seeder
             ['name' => 'Edit Users', 'verb' => 'update', 'resource' => 'users'],
             ['name' => 'Delete Users', 'verb' => 'delete', 'resource' => 'users'],
             
+            // Academic Year management
+            ['name' => 'Manage Academic Years', 'verb' => 'create', 'resource' => 'academic_years'],
+            ['name' => 'View Academic Years', 'verb' => 'read', 'resource' => 'academic_years'],
+            ['name' => 'Edit Academic Years', 'verb' => 'update', 'resource' => 'academic_years'],
+            ['name' => 'Delete Academic Years', 'verb' => 'delete', 'resource' => 'academic_years'],
+            
+            // Subject management
+            ['name' => 'Manage Subjects', 'verb' => 'create', 'resource' => 'subjects'],
+            ['name' => 'View Subjects', 'verb' => 'read', 'resource' => 'subjects'],
+            ['name' => 'Edit Subjects', 'verb' => 'update', 'resource' => 'subjects'],
+            ['name' => 'Delete Subjects', 'verb' => 'delete', 'resource' => 'subjects'],
+            
             // Class management
             ['name' => 'Manage Classes', 'verb' => 'create', 'resource' => 'classes'],
             ['name' => 'View Classes', 'verb' => 'read', 'resource' => 'classes'],
@@ -49,6 +61,8 @@ class PermissionSeeder extends Seeder
         // Teacher permissions
         $teacherPermissions = Permission::whereIn('name', [
             'View Users',
+            'View Academic Years',
+            'View Subjects',
             'Manage Classes',
             'View Classes',
             'Edit Classes',
@@ -60,6 +74,8 @@ class PermissionSeeder extends Seeder
 
         // Student permissions
         $studentPermissions = Permission::whereIn('name', [
+            'View Academic Years',
+            'View Subjects',
             'View Classes',
             'View Grades',
         ])->get();
