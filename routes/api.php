@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AcademicController;
+use App\Http\Controllers\StudentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,6 +59,30 @@ Route::prefix('academic')->middleware('auth:sanctum')->group(function () {
         Route::put('/{class}', [AcademicController::class, 'updateClass'])->middleware('permission:Manage Classes');
         Route::delete('/{class}', [AcademicController::class, 'destroyClass'])->middleware('permission:Manage Classes');
         Route::get('/year/{academicYear}', [AcademicController::class, 'getClassesByAcademicYear']);
+    });
+});
+
+// Student Management routes
+Route::prefix('students')->middleware('auth:sanctum')->group(function () {
+    
+    // Students
+    Route::get('/', [StudentController::class, 'index']);
+    Route::post('/', [StudentController::class, 'store'])->middleware('permission:Manage Students');
+    Route::get('/statistics', [StudentController::class, 'getStatistics']);
+    Route::get('/class/{classId}', [StudentController::class, 'getByClass']);
+    Route::get('/academic-year/{academicYearId}', [StudentController::class, 'getByAcademicYear']);
+    Route::get('/{student}', [StudentController::class, 'show']);
+    Route::put('/{student}', [StudentController::class, 'update'])->middleware('permission:Edit Students');
+    Route::delete('/{student}', [StudentController::class, 'destroy'])->middleware('permission:Delete Students');
+    Route::post('/{student}/transfer', [StudentController::class, 'transferStudent'])->middleware('permission:Manage Students');
+
+    // Enrollments
+    Route::prefix('enrollments')->group(function () {
+        Route::get('/', [StudentController::class, 'indexEnrollments']);
+        Route::post('/', [StudentController::class, 'storeEnrollment'])->middleware('permission:Manage Students');
+        Route::get('/{enrollment}', [StudentController::class, 'showEnrollment']);
+        Route::put('/{enrollment}', [StudentController::class, 'updateEnrollment'])->middleware('permission:Edit Students');
+        Route::delete('/{enrollment}', [StudentController::class, 'destroyEnrollment'])->middleware('permission:Delete Students');
     });
 });
 

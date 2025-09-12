@@ -39,6 +39,12 @@ class PermissionSeeder extends Seeder
             ['name' => 'Edit Classes', 'verb' => 'update', 'resource' => 'classes'],
             ['name' => 'Delete Classes', 'verb' => 'delete', 'resource' => 'classes'],
             
+            // Student management
+            ['name' => 'Manage Students', 'verb' => 'create', 'resource' => 'students'],
+            ['name' => 'View Students', 'verb' => 'read', 'resource' => 'students'],
+            ['name' => 'Edit Students', 'verb' => 'update', 'resource' => 'students'],
+            ['name' => 'Delete Students', 'verb' => 'delete', 'resource' => 'students'],
+            
             // Grade management
             ['name' => 'Create Grades', 'verb' => 'create', 'resource' => 'grades'],
             ['name' => 'View Grades', 'verb' => 'read', 'resource' => 'grades'],
@@ -66,6 +72,8 @@ class PermissionSeeder extends Seeder
             'Manage Classes',
             'View Classes',
             'Edit Classes',
+            'View Students',
+            'Edit Students',
             'Create Grades',
             'View Grades',
             'Edit Grades',
@@ -77,6 +85,7 @@ class PermissionSeeder extends Seeder
             'View Academic Years',
             'View Subjects',
             'View Classes',
+            'View Students',
             'View Grades',
         ])->get();
         $student->permissions()->attach($studentPermissions);
