@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AcademicController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\GradeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -110,6 +111,36 @@ Route::prefix('teachers')->middleware('auth:sanctum')->group(function () {
         Route::put('/{classTeacher}', [TeacherController::class, 'updateAssignment'])->middleware('permission:Edit Teachers');
         Route::delete('/{classTeacher}', [TeacherController::class, 'destroyAssignment'])->middleware('permission:Delete Teachers');
     });
+});
+
+// Grade Management routes
+Route::prefix('grades')->middleware('auth:sanctum')->group(function () {
+    
+    // Exams
+    Route::prefix('exams')->group(function () {
+        Route::get('/', [GradeController::class, 'indexExams']);
+        Route::post('/', [GradeController::class, 'storeExam'])->middleware('permission:Manage Grades');
+        Route::get('/{exam}', [GradeController::class, 'showExam']);
+        Route::put('/{exam}', [GradeController::class, 'updateExam'])->middleware('permission:Edit Grades');
+        Route::delete('/{exam}', [GradeController::class, 'destroyExam'])->middleware('permission:Delete Grades');
+        Route::post('/{exam}/toggle-publish', [GradeController::class, 'togglePublish'])->middleware('permission:Edit Grades');
+        Route::get('/{exam}/statistics', [GradeController::class, 'getExamStatistics']);
+    });
+
+    // Grades
+    Route::get('/', [GradeController::class, 'indexGrades']);
+    Route::post('/', [GradeController::class, 'storeGrade'])->middleware('permission:Create Grades');
+    Route::get('/statistics', [GradeController::class, 'getGradeStatistics']);
+    Route::get('/{grade}', [GradeController::class, 'showGrade']);
+    Route::put('/{grade}', [GradeController::class, 'updateGrade'])->middleware('permission:Edit Grades');
+    Route::delete('/{grade}', [GradeController::class, 'destroyGrade'])->middleware('permission:Delete Grades');
+
+    // Bulk operations
+    Route::post('/exams/{exam}/bulk', [GradeController::class, 'bulkCreateGrades'])->middleware('permission:Create Grades');
+
+    // Reports
+    Route::get('/students/{student}/report', [GradeController::class, 'getStudentGradeReport']);
+    Route::get('/classes/{class}/report', [GradeController::class, 'getClassGradeReport']);
 });
 
 // Health check route
