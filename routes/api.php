@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AcademicController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\TeacherController;
 
 /*
 |--------------------------------------------------------------------------
@@ -83,6 +84,31 @@ Route::prefix('students')->middleware('auth:sanctum')->group(function () {
         Route::get('/{enrollment}', [StudentController::class, 'showEnrollment']);
         Route::put('/{enrollment}', [StudentController::class, 'updateEnrollment'])->middleware('permission:Edit Students');
         Route::delete('/{enrollment}', [StudentController::class, 'destroyEnrollment'])->middleware('permission:Delete Students');
+    });
+});
+
+// Teacher Management routes
+Route::prefix('teachers')->middleware('auth:sanctum')->group(function () {
+    
+    // Teachers
+    Route::get('/', [TeacherController::class, 'index']);
+    Route::post('/', [TeacherController::class, 'store'])->middleware('permission:Manage Teachers');
+    Route::get('/statistics', [TeacherController::class, 'getStatistics']);
+    Route::get('/subject/{subjectId}', [TeacherController::class, 'getBySubject']);
+    Route::get('/class/{classId}', [TeacherController::class, 'getByClass']);
+    Route::get('/{teacher}', [TeacherController::class, 'show']);
+    Route::put('/{teacher}', [TeacherController::class, 'update'])->middleware('permission:Edit Teachers');
+    Route::delete('/{teacher}', [TeacherController::class, 'destroy'])->middleware('permission:Delete Teachers');
+
+    // Class Teacher Assignments
+    Route::prefix('assignments')->group(function () {
+        Route::get('/', [TeacherController::class, 'indexAssignments']);
+        Route::post('/', [TeacherController::class, 'storeAssignment'])->middleware('permission:Manage Teachers');
+        Route::post('/assign', [TeacherController::class, 'assignToClass'])->middleware('permission:Manage Teachers');
+        Route::get('/available', [TeacherController::class, 'getAvailableTeachers']);
+        Route::get('/{classTeacher}', [TeacherController::class, 'showAssignment']);
+        Route::put('/{classTeacher}', [TeacherController::class, 'updateAssignment'])->middleware('permission:Edit Teachers');
+        Route::delete('/{classTeacher}', [TeacherController::class, 'destroyAssignment'])->middleware('permission:Delete Teachers');
     });
 });
 
