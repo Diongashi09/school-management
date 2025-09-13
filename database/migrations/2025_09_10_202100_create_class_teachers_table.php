@@ -21,7 +21,7 @@ return new class extends Migration
             $table->timestamps();
 
             // Ensure a teacher can only teach one subject per class per academic year
-            $table->unique(['teacher_id', 'class_id', 'academic_year_id', 'subject_id']);
+            $table->unique(['teacher_id', 'class_id', 'academic_year_id', 'subject_id'], 'ct_unique_assignment');
         });
     }
 

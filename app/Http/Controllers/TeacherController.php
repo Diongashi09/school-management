@@ -2,22 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Teacher;
-use App\Models\ClassTeacher;
-use App\Models\User;
-use App\Models\ClassModel;
-use App\Models\Subject;
-use App\Models\AcademicYear;
+use App\Services\TeacherService;
 use App\Http\Requests\StoreTeacherRequest;
 use App\Http\Requests\UpdateTeacherRequest;
 use App\Http\Requests\StoreClassTeacherRequest;
 use App\Http\Requests\UpdateClassTeacherRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class TeacherController extends Controller
 {
+    protected $teacherService;
+
+    public function __construct(TeacherService $teacherService)
+    {
+        $this->teacherService = $teacherService;
+    }
+
     // Teacher Management endpoints
 
     /**
@@ -25,31 +26,29 @@ class TeacherController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Teacher::with(['user', 'classes', 'subjects']);
+        $query = $this->teacherService->getPaginatedTeachers();
 
         if ($request->has('status')) {
-            $query->byStatus($request->status);
+            $teachers = $this->teacherService->getTeachersByStatus($request->status);
+            return response()->json($teachers);
         }
 
         if ($request->has('subject_id')) {
-            $query->whereHas('subjects', function ($q) use ($request) {
-                $q->where('subjects.id', $request->subject_id);
-            });
+            $teachers = $this->teacherService->getTeachersBySubject($request->subject_id);
+            return response()->json($teachers);
         }
 
         if ($request->has('class_id')) {
-            $query->whereHas('classes', function ($q) use ($request) {
-                $q->where('classes.id', $request->class_id);
-            });
+            $teachers = $this->teacherService->getTeachersByClass($request->class_id);
+            return response()->json($teachers);
         }
 
         if ($request->has('search')) {
-            $query->search($request->search);
+            $teachers = $this->teacherService->searchTeachers($request->search);
+            return response()->json($teachers);
         }
 
-        $teachers = $query->orderBy('created_at', 'desc')->paginate(15);
-
-        return response()->json($teachers);
+        return response()->json($query);
     }
 
     /**
@@ -57,31 +56,15 @@ class TeacherController extends Controller
      */
     public function store(StoreTeacherRequest $request): JsonResponse
     {
-        DB::beginTransaction();
-
         try {
-            // Create user account first
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'password' => bcrypt($request->password),
-                'role_id' => 2, // Teacher role
-            ]);
-
-            // Create teacher profile
-            $teacher = Teacher::create(array_merge($request->validated(), [
-                'user_id' => $user->id,
-            ]));
-
-            DB::commit();
+            $teacher = $this->teacherService->createTeacher($request->validated());
 
             return response()->json([
                 'message' => 'Teacher created successfully',
-                'data' => $teacher->load('user')
+                'data' => $teacher
             ], 201);
 
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json([
                 'message' => 'Failed to create teacher',
                 'error' => $e->getMessage()
@@ -92,8 +75,14 @@ class TeacherController extends Controller
     /**
      * Display the specified teacher.
      */
-    public function show(Teacher $teacher): JsonResponse
+    public function show(int $id): JsonResponse
     {
+        $teacher = $this->teacherService->getTeacherById($id);
+        
+        if (!$teacher) {
+            return response()->json(['message' => 'Teacher not found'], 404);
+        }
+
         $teacher->load(['user', 'classes.academicYear', 'subjects', 'currentAssignments.class', 'currentAssignments.subject']);
         
         return response()->json($teacher);
@@ -102,20 +91,16 @@ class TeacherController extends Controller
     /**
      * Update the specified teacher.
      */
-    public function update(UpdateTeacherRequest $request, Teacher $teacher): JsonResponse
+    public function update(UpdateTeacherRequest $request, int $id): JsonResponse
     {
-        DB::beginTransaction();
-
         try {
-            // Update teacher profile
-            $teacher->update($request->validated());
+            $updated = $this->teacherService->updateTeacher($id, $request->validated());
 
-            // Update user account if name or email provided
-            if ($request->has('name') || $request->has('email')) {
-                $teacher->user->update($request->only(['name', 'email']));
+            if (!$updated) {
+                return response()->json(['message' => 'Teacher not found'], 404);
             }
 
-            DB::commit();
+            $teacher = $this->teacherService->getTeacherById($id);
 
             return response()->json([
                 'message' => 'Teacher updated successfully',
@@ -123,7 +108,6 @@ class TeacherController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json([
                 'message' => 'Failed to update teacher',
                 'error' => $e->getMessage()
@@ -134,31 +118,32 @@ class TeacherController extends Controller
     /**
      * Remove the specified teacher.
      */
-    public function destroy(Teacher $teacher): JsonResponse
+    public function destroy(int $id): JsonResponse
     {
-        if ($teacher->currentAssignments()->exists()) {
+        try {
+            $deleted = $this->teacherService->deleteTeacher($id);
+
+            if (!$deleted) {
+                return response()->json(['message' => 'Teacher not found'], 404);
+            }
+
             return response()->json([
-                'message' => 'Cannot delete teacher with active class assignments'
+                'message' => 'Teacher deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage()
             ], 422);
         }
-
-        $teacher->delete();
-
-        return response()->json([
-            'message' => 'Teacher deleted successfully'
-        ]);
     }
 
     /**
      * Get teachers by subject.
      */
-    public function getBySubject(Request $request, $subjectId): JsonResponse
+    public function getBySubject(Request $request, int $subjectId): JsonResponse
     {
-        $teachers = Teacher::with(['user', 'classes'])
-            ->whereHas('subjects', function ($q) use ($subjectId) {
-                $q->where('subjects.id', $subjectId);
-            })
-            ->paginate(15);
+        $teachers = $this->teacherService->getTeachersBySubject($subjectId);
 
         return response()->json($teachers);
     }
@@ -166,13 +151,9 @@ class TeacherController extends Controller
     /**
      * Get teachers by class.
      */
-    public function getByClass(Request $request, $classId): JsonResponse
+    public function getByClass(Request $request, int $classId): JsonResponse
     {
-        $teachers = Teacher::with(['user', 'subjects'])
-            ->whereHas('classes', function ($q) use ($classId) {
-                $q->where('classes.id', $classId);
-            })
-            ->paginate(15);
+        $teachers = $this->teacherService->getTeachersByClass($classId);
 
         return response()->json($teachers);
     }
@@ -182,14 +163,7 @@ class TeacherController extends Controller
      */
     public function getStatistics(): JsonResponse
     {
-        $stats = [
-            'total_teachers' => Teacher::count(),
-            'active_teachers' => Teacher::active()->count(),
-            'inactive_teachers' => Teacher::byStatus('inactive')->count(),
-            'terminated_teachers' => Teacher::byStatus('terminated')->count(),
-            'teachers_with_assignments' => Teacher::whereHas('currentAssignments')->count(),
-            'average_experience' => Teacher::active()->avg(DB::raw('DATEDIFF(NOW(), hire_date) / 365')),
-        ];
+        $stats = $this->teacherService->getTeacherStatistics();
 
         return response()->json($stats);
     }
@@ -201,27 +175,30 @@ class TeacherController extends Controller
      */
     public function indexAssignments(Request $request): JsonResponse
     {
-        $query = ClassTeacher::with(['teacher.user', 'class', 'subject', 'academicYear']);
+        $query = $this->teacherService->getPaginatedAssignments();
 
         if ($request->has('teacher_id')) {
-            $query->byTeacher($request->teacher_id);
+            $assignments = $this->teacherService->getAssignmentsByTeacher($request->teacher_id);
+            return response()->json($assignments);
         }
 
         if ($request->has('class_id')) {
-            $query->byClass($request->class_id);
+            $assignments = $this->teacherService->getAssignmentsByClass($request->class_id);
+            return response()->json($assignments);
         }
 
         if ($request->has('academic_year_id')) {
-            $query->byAcademicYear($request->academic_year_id);
+            $assignments = $this->teacherService->getAssignmentsByAcademicYear($request->academic_year_id);
+            return response()->json($assignments);
         }
 
         if ($request->has('is_primary')) {
-            $query->where('is_primary', $request->boolean('is_primary'));
+            $assignments = $this->teacherService->getAllAssignments()
+                ->where('is_primary', $request->boolean('is_primary'));
+            return response()->json($assignments);
         }
 
-        $assignments = $query->orderBy('created_at', 'desc')->paginate(15);
-
-        return response()->json($assignments);
+        return response()->json($query);
     }
 
     /**
@@ -229,56 +206,66 @@ class TeacherController extends Controller
      */
     public function storeAssignment(StoreClassTeacherRequest $request): JsonResponse
     {
-        // Check if teacher is already assigned to the same class and subject for the same academic year
-        $existingAssignment = ClassTeacher::where('teacher_id', $request->teacher_id)
-            ->where('class_id', $request->class_id)
-            ->where('subject_id', $request->subject_id)
-            ->where('academic_year_id', $request->academic_year_id)
-            ->first();
+        try {
+            $assignment = $this->teacherService->createAssignment($request->validated());
 
-        if ($existingAssignment) {
             return response()->json([
-                'message' => 'Teacher is already assigned to this class and subject for this academic year'
+                'message' => 'Class teacher assignment created successfully',
+                'data' => $assignment->load(['teacher.user', 'class', 'subject', 'academicYear'])
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage()
             ], 422);
         }
-
-        $assignment = ClassTeacher::create($request->validated());
-
-        return response()->json([
-            'message' => 'Class teacher assignment created successfully',
-            'data' => $assignment->load(['teacher.user', 'class', 'subject', 'academicYear'])
-        ], 201);
     }
 
     /**
      * Display the specified class teacher assignment.
      */
-    public function showAssignment(ClassTeacher $classTeacher): JsonResponse
+    public function showAssignment(int $id): JsonResponse
     {
-        $classTeacher->load(['teacher.user', 'class', 'subject', 'academicYear']);
+        $assignment = $this->teacherService->getAssignmentById($id);
         
-        return response()->json($classTeacher);
+        if (!$assignment) {
+            return response()->json(['message' => 'Assignment not found'], 404);
+        }
+
+        $assignment->load(['teacher.user', 'class', 'subject', 'academicYear']);
+        
+        return response()->json($assignment);
     }
 
     /**
      * Update the specified class teacher assignment.
      */
-    public function updateAssignment(UpdateClassTeacherRequest $request, ClassTeacher $classTeacher): JsonResponse
+    public function updateAssignment(UpdateClassTeacherRequest $request, int $id): JsonResponse
     {
-        $classTeacher->update($request->validated());
+        $updated = $this->teacherService->updateAssignment($id, $request->validated());
+
+        if (!$updated) {
+            return response()->json(['message' => 'Assignment not found'], 404);
+        }
+
+        $assignment = $this->teacherService->getAssignmentById($id);
 
         return response()->json([
             'message' => 'Class teacher assignment updated successfully',
-            'data' => $classTeacher->load(['teacher.user', 'class', 'subject', 'academicYear'])
+            'data' => $assignment->load(['teacher.user', 'class', 'subject', 'academicYear'])
         ]);
     }
 
     /**
      * Remove the specified class teacher assignment.
      */
-    public function destroyAssignment(ClassTeacher $classTeacher): JsonResponse
+    public function destroyAssignment(int $id): JsonResponse
     {
-        $classTeacher->delete();
+        $deleted = $this->teacherService->deleteAssignment($id);
+
+        if (!$deleted) {
+            return response()->json(['message' => 'Assignment not found'], 404);
+        }
 
         return response()->json([
             'message' => 'Class teacher assignment deleted successfully'
@@ -298,31 +285,25 @@ class TeacherController extends Controller
             'is_primary' => 'sometimes|boolean',
         ]);
 
-        // Check if teacher is already assigned to the same class and subject
-        $existingAssignment = ClassTeacher::where('teacher_id', $request->teacher_id)
-            ->where('class_id', $request->class_id)
-            ->where('subject_id', $request->subject_id)
-            ->where('academic_year_id', $request->academic_year_id)
-            ->first();
+        try {
+            $assignment = $this->teacherService->createAssignment([
+                'teacher_id' => $request->teacher_id,
+                'class_id' => $request->class_id,
+                'subject_id' => $request->subject_id,
+                'academic_year_id' => $request->academic_year_id,
+                'is_primary' => $request->boolean('is_primary', false),
+            ]);
 
-        if ($existingAssignment) {
             return response()->json([
-                'message' => 'Teacher is already assigned to this class and subject for this academic year'
+                'message' => 'Teacher assigned to class successfully',
+                'data' => $assignment->load(['teacher.user', 'class', 'subject', 'academicYear'])
+            ], 201);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage()
             ], 422);
         }
-
-        $assignment = ClassTeacher::create([
-            'teacher_id' => $request->teacher_id,
-            'class_id' => $request->class_id,
-            'subject_id' => $request->subject_id,
-            'academic_year_id' => $request->academic_year_id,
-            'is_primary' => $request->boolean('is_primary', false),
-        ]);
-
-        return response()->json([
-            'message' => 'Teacher assigned to class successfully',
-            'data' => $assignment->load(['teacher.user', 'class', 'subject', 'academicYear'])
-        ], 201);
     }
 
     /**
@@ -336,15 +317,11 @@ class TeacherController extends Controller
             'academic_year_id' => 'required|exists:academic_years,id',
         ]);
 
-        $assignedTeacherIds = ClassTeacher::where('class_id', $request->class_id)
-            ->where('subject_id', $request->subject_id)
-            ->where('academic_year_id', $request->academic_year_id)
-            ->pluck('teacher_id');
-
-        $availableTeachers = Teacher::with('user')
-            ->whereNotIn('id', $assignedTeacherIds)
-            ->active()
-            ->get();
+        $availableTeachers = $this->teacherService->getAvailableTeachers(
+            $request->class_id,
+            $request->subject_id,
+            $request->academic_year_id
+        );
 
         return response()->json($availableTeachers);
     }
