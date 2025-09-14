@@ -18,6 +18,10 @@ use App\Repositories\Interfaces\ExamRepositoryInterface;
 use App\Repositories\ExamRepository;
 use App\Repositories\Interfaces\GradeRepositoryInterface;
 use App\Repositories\GradeRepository;
+use App\Repositories\Interfaces\ParentRepositoryInterface;
+use App\Repositories\ParentRepository;
+use App\Repositories\Interfaces\StudentParentRepositoryInterface;
+use App\Repositories\StudentParentRepository;
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -35,6 +39,9 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(ClassTeacherRepositoryInterface::class, ClassTeacherRepository::class);
         $this->app->bind(ExamRepositoryInterface::class, ExamRepository::class);
         $this->app->bind(GradeRepositoryInterface::class, GradeRepository::class);
+        // Parent Management
+        $this->app->bind(ParentRepositoryInterface::class, ParentRepository::class);
+        $this->app->bind(StudentParentRepositoryInterface::class, StudentParentRepository::class);
     }
 
     /**

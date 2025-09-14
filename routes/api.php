@@ -7,6 +7,8 @@ use App\Http\Controllers\AcademicController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\GradeController;
+use App\Http\Controllers\ParentController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -141,6 +143,33 @@ Route::prefix('grades')->middleware('auth:sanctum')->group(function () {
     // Reports
     Route::get('/students/{student}/report', [GradeController::class, 'getStudentGradeReport']);
     Route::get('/classes/{class}/report', [GradeController::class, 'getClassGradeReport']);
+});
+
+// Parent Management Routes
+Route::middleware(['auth:sanctum', 'permission:manage_parents'])->group(function () {
+    // Parent CRUD
+    Route::get('/parents', [ParentController::class, 'index']);
+    Route::post('/parents', [ParentController::class, 'store']);
+    Route::get('/parents/{parent}', [ParentController::class, 'show']);
+    Route::put('/parents/{parent}', [ParentController::class, 'update']);
+    Route::delete('/parents/{parent}', [ParentController::class, 'destroy']);
+    
+    // Parent specific endpoints
+    Route::get('/parents/student/{studentId}', [ParentController::class, 'getByStudent']);
+    Route::get('/parents/primary-contacts', [ParentController::class, 'getPrimaryContacts']);
+    Route::get('/parents/emergency-contacts', [ParentController::class, 'getEmergencyContacts']);
+    Route::get('/parents/statistics', [ParentController::class, 'getStatistics']);
+    
+    // Student-Parent Relationships
+    Route::get('/student-parents', [ParentController::class, 'indexRelationships']);
+    Route::post('/student-parents', [ParentController::class, 'storeRelationship']);
+    Route::get('/student-parents/{id}', [ParentController::class, 'showRelationship']);
+    Route::put('/student-parents/{id}', [ParentController::class, 'updateRelationship']);
+    Route::delete('/student-parents/{id}', [ParentController::class, 'destroyRelationship']);
+    
+    // Assignment operations
+    Route::post('/parents/assign-to-student', [ParentController::class, 'assignToStudent']);
+    Route::post('/parents/remove-from-student', [ParentController::class, 'removeFromStudent']);
 });
 
 // Health check route
