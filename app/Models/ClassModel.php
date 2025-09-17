@@ -88,4 +88,8 @@ class ClassModel extends Model
     {
         return $query->where('grade_level', $grade);
     }
+    public function attendances()
+{
+    return $this->hasMany(Attendance::class, 'class_id');
+}
 }
