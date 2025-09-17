@@ -139,4 +139,19 @@ class Student extends Model
     {
         return $this->user->email ?? 'N/A';
     }
+    public function attendances()
+{
+    return $this->hasMany(Attendance::class);
+}
+
+/**
+ * Get the attendance records for current academic year.
+ */
+public function currentYearAttendances()
+{
+    return $this->hasMany(Attendance::class)
+        ->whereHas('academicYear', function ($query) {
+            $query->where('is_current', true);
+        });
+}
 }
