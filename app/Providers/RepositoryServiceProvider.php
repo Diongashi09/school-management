@@ -42,6 +42,10 @@ class RepositoryServiceProvider extends ServiceProvider
         // Parent Management
         $this->app->bind(ParentRepositoryInterface::class, ParentRepository::class);
         $this->app->bind(StudentParentRepositoryInterface::class, StudentParentRepository::class);
+        $this->app->bind(
+            \App\Repositories\Interfaces\AttendanceRepositoryInterface::class,
+            \App\Repositories\AttendanceRepository::class
+        );
     }
 
     /**
