@@ -176,3 +176,29 @@ Route::middleware(['auth:sanctum', 'permission:manage_parents'])->group(function
 Route::get('/health', function () {
     return response()->json(['status' => 'OK', 'timestamp' => now()]);
 });
+Route::prefix('attendance')->middleware('auth:sanctum')->group(function () {
+    
+    // Basic CRUD operations
+    Route::get('/', [AttendanceController::class, 'index']);
+    Route::post('/', [AttendanceController::class, 'store'])->middleware('permission:Create Attendance');
+    Route::get('/{id}', [AttendanceController::class, 'show']);
+    Route::put('/{id}', [AttendanceController::class, 'update'])->middleware('permission:Edit Attendance');
+    Route::delete('/{id}', [AttendanceController::class, 'destroy'])->middleware('permission:Delete Attendance');
+    
+    // Bulk operations
+    Route::post('/bulk', [AttendanceController::class, 'bulkStore'])->middleware('permission:Create Attendance');
+    Route::post('/mark-class', [AttendanceController::class, 'markClassAttendance'])->middleware('permission:Create Attendance');
+    
+    // Query operations
+    Route::get('/date/{date}', [AttendanceController::class, 'getByDate']);
+    Route::get('/student/{studentId}', [AttendanceController::class, 'getByStudent']);
+    Route::get('/class/{classId}', [AttendanceController::class, 'getByClass']);
+    Route::get('/class/{classId}/today', [AttendanceController::class, 'getTodayAttendance']);
+    
+    // Statistics and reports
+    Route::get('/student/{studentId}/stats', [AttendanceController::class, 'getStudentStats']);
+    Route::get('/class/{classId}/stats', [AttendanceController::class, 'getClassStats']);
+    Route::get('/reports/daily', [AttendanceController::class, 'getDailyReport']);
+    Route::get('/reports/monthly', [AttendanceController::class, 'getMonthlyReport']);
+});
+
